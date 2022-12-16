@@ -19,7 +19,6 @@ public class RequestUtilities {
 
     public HttpResponse getRequest(String uri) throws IOException {
         String fullUri = baseUrl + uri;
-        System.out.println(fullUri);
         HttpUriRequest request = new HttpGet(baseUrl + uri);
 
         HttpResponse response = HttpClientBuilder.create().build().execute(request);
@@ -28,8 +27,6 @@ public class RequestUtilities {
 
     public HttpResponse postRequest(String uri, String body) throws IOException {
         String fullUri = baseUrl + uri;
-        System.out.println(fullUri);
-        System.out.println(body);
         HttpPost request = new HttpPost(baseUrl + uri);
         HttpEntity stringEntity = new StringEntity(body, ContentType.APPLICATION_JSON);
         request.setEntity(stringEntity);
@@ -40,7 +37,6 @@ public class RequestUtilities {
 
     public HttpResponse deleteRequest(String uri) throws IOException {
         String fullUri = baseUrl + uri;
-        System.out.println(fullUri);
         HttpUriRequest request = new HttpDelete(baseUrl + uri);
         HttpResponse response = HttpClientBuilder.create().build().execute(request);
         return response;
@@ -48,7 +44,6 @@ public class RequestUtilities {
 
     public HttpResponse putRequest(String uri, String body) throws IOException {
         String fullUri = baseUrl + uri;
-        System.out.println(fullUri);
         HttpClient httpClient = HttpClientBuilder.create().build();
         HttpPut request = new HttpPut(baseUrl + uri);
         HttpEntity stringEntity = new StringEntity(body, ContentType.APPLICATION_JSON);
@@ -58,8 +53,8 @@ public class RequestUtilities {
         return response;
     }
 
-    public HttpResponse getInvestigations() throws IOException {
-        HttpResponse response = getRequest("investigations/");
+    public HttpResponse getInvestigations(String parameters) throws IOException {
+        HttpResponse response = getRequest("investigations/" + parameters);
         return response;
     }
 

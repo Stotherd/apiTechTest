@@ -1,20 +1,13 @@
-
 import com.google.gson.Gson;
 import org.apache.http.*;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.*;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.params.HttpParams;
 import org.apache.http.util.EntityUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.apache.http.impl.client.HttpClientBuilder;
-
 import java.io.IOException;
-import java.util.Locale;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class SignifydTest {
 
@@ -24,15 +17,16 @@ public class SignifydTest {
     private Investigation setupInvestigation;
     private Gson gsonParser = new Gson();
 
-    public void cleanUp() throws IOException {
-        HttpResponse response = requtil.getInvestigations();
-
-        Investigations investigations = gsonParser.fromJson(EntityUtils.toString(response.getEntity()), Investigations.class);
-        int totalResult = investigations.totalResults;
-        for (Investigation investigation : investigations.investigations) {
-            String id = investigation.investigationId;
-            requtil.deleteInvestigation(id);
+    public Date convertStringToDate(String data) {
+        SimpleDateFormat sf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+        try {
+            Date dateTime = sf.parse(data);
+            return dateTime;
+        } catch (ParseException | java.text.ParseException e) {
+            e.printStackTrace();
         }
+        Date date = new Date();
+        return date;
     }
 
     @Before
@@ -53,7 +47,7 @@ public class SignifydTest {
     @Test
     public void getAllExistingInvestigations() throws IOException {
         //Get all existing investigations and verify they match the schema.
-        HttpResponse response = requtil.getInvestigations();
+        HttpResponse response = requtil.getInvestigations("");
 
         Investigations investigations = gsonParser.fromJson(EntityUtils.toString(response.getEntity()), Investigations.class);
         int totalResult = investigations.totalResults;
@@ -68,51 +62,65 @@ public class SignifydTest {
         Assert.assertEquals(200, statusCode);
     }
 
+    @Test
+    public void getAllExistingInvestigationsPageLimit() throws IOException {
+        //Get all existing investigations with a page limit and the length matches the page limit.
+        //Assumes more than 2 entries.
+        int size_of_page = 2;
+        HttpResponse response = requtil.getInvestigations("?limit=" + size_of_page + "&page=1");
 
-    //
-//    @Test
-//    public void getAllExistingInvestigationsPageLimit() {
-//        //Get all existing investigations with a page limit and the length matches the page limit.
-//        //Add a few more to ensure it was big enough
-//    }
-//
-//    @Test
-//    public void getAllExistingInvestigationsPageTwo() {
-//        //Get all existing investigations with a page limit and page 2.
-//        //Add a few more to ensure it was big enough
-//    }
-//
-//    @Test
-//    public void getAllExistingInvestigationsSortByCreatedDate() {
-//        //Get all existing investigations and ensure name is in alphabetical order.
-//        //Repeat for asc/desc
-//    }
+        Investigations investigations = gsonParser.fromJson(EntityUtils.toString(response.getEntity()), Investigations.class);
+        int totalResult = investigations.totalResults;
+        int count = 0;
+        for (Investigation investigation : investigations.investigations) {
+            count++;
+        }
+        //Verify list is the same size as reported
+        Assert.assertNotEquals(totalResult, count);
+        Assert.assertEquals(size_of_page, count);
+        //Verify Status Code
+        int statusCode = response.getStatusLine().getStatusCode();
+        Assert.assertEquals(200, statusCode);
+    }
+    @Test
+    public void getAllExistingInvestigationsSortByCreatedDate() throws IOException {
+        //Get all existing investigations and ensure created date is in reverse order.
+        //Requires 3 or more entries
+        HttpResponse response = requtil.getInvestigations("?sortBy=createdAt&order=desc");
+
+        Investigations investigations = gsonParser.fromJson(EntityUtils.toString(response.getEntity()), Investigations.class);
+        int totalResult = investigations.totalResults;
+        //loop through all investigations and verify the created date is a date and is decreasing
+        for(int i = 0; i<totalResult-1; i++) {
+            Date dateFirst = convertStringToDate(investigations.investigations[i].createdAt);
+            Date dateSecond = convertStringToDate(investigations.investigations[i+1].createdAt);
+            Assert.assertTrue(dateFirst.compareTo(dateSecond) > 0);
+        }
+
+        int statusCode = response.getStatusLine().getStatusCode();
+        Assert.assertEquals(200, statusCode);
+    }
 //
 //
 //    @Test
 //    public void getAllExistingInvestigationsSortByName() {
-//        //Get all existing investigations and ensure name is in alphabetical order.
-//        //Repeat for asc/desc
+//        //Get all existing investigations and ensure name is in alphabetical order
 //    }
 //
 //    @Test
 //    public void getAllExistingInvestigationsSortByID() {
 //        //Get all existing investigations and ensure id is in order.
-//        //Repeat for asc/desc
 //    }
 //
 //    @Test
 //    public void getAllExistingInvestigationsSortByAmount() {
 //        //Get all existing investigations and ensure Amount is in order.
-//        //Repeat for asc/desc
 //    }
 //
     @Test
     public void createInvestigation() {
         Assert.assertEquals(201, setupInvestigationResponse.getStatusLine().getStatusCode());
     }
-
-
     @Test
     public void createInvestigationMissingName() throws IOException {
         //This test fails. Currently a randomly selected name is inserted into the required name field.
@@ -120,7 +128,6 @@ public class SignifydTest {
         Assert.assertEquals(EntityUtils.toString(response.getEntity()), "\"Unexpected Error\"");
         Assert.assertEquals(400, response.getStatusLine().getStatusCode());
     }
-
     @Test
     public void getIndividualInvestigation() throws IOException {
         HttpResponse response = requtil.getInvestigation(setupInvestigation.investigationId);
@@ -130,7 +137,6 @@ public class SignifydTest {
         int statusCode = response.getStatusLine().getStatusCode();
         Assert.assertEquals(200, statusCode);
     }
-
     @Test
     public void getIndividualInvestigationThatDoesntExist() throws IOException {
         //We assume 1 does not exist
@@ -157,7 +163,6 @@ public class SignifydTest {
         int statusCode = response.getStatusLine().getStatusCode();
         Assert.assertEquals(404, statusCode);
     }
-//
     @Test
     public void updateInvestigationNoId() throws IOException {
         HttpResponse response = requtil.updateInvestigation("", "test", "1234");
@@ -165,7 +170,6 @@ public class SignifydTest {
         int statusCode = response.getStatusLine().getStatusCode();
         Assert.assertEquals(400, statusCode);
     }
-//
     @Test
     public void updateInvestigationMissingName() throws IOException {
         //This test fails as the request actually succeeds, however a required field is missing so the request should return an error state
@@ -174,7 +178,6 @@ public class SignifydTest {
         int statusCode = response.getStatusLine().getStatusCode();
         Assert.assertEquals(400, statusCode);
     }
-//
     @Test
     public void deleteInvestigation() throws IOException {
         HttpResponse response = requtil.deleteInvestigation(setupInvestigation.investigationId);
@@ -183,7 +186,6 @@ public class SignifydTest {
         int statusCode = response.getStatusLine().getStatusCode();
         Assert.assertEquals(200, statusCode);
     }
-//
     @Test
     public void deleteInvestigationIdDoesntExist() throws IOException {
         //Again we assume 1 does not and will not exists, however we could scan the api for an invalid id.
@@ -192,7 +194,6 @@ public class SignifydTest {
         int statusCode = response.getStatusLine().getStatusCode();
         Assert.assertEquals(404, statusCode);
     }
-
     @Test
     public void deleteInvestigationNoId() throws IOException {
         //Again we assume 1 does not and will not exists, however we could scan the api for an invalid id.
