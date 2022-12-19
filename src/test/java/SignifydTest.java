@@ -17,6 +17,9 @@ public class SignifydTest {
     private HttpResponse setupInvestigationResponse;
     private Investigation setupInvestigation;
 
+    final private String notFoundError = "\"Not found\"";
+    final private String invalidRequestError = "{\"msg\":\"Invalid request\"}";
+
     public Date convertStringToDate(String data) {
         SimpleDateFormat sf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
         try {
@@ -118,7 +121,8 @@ public class SignifydTest {
     public void createInvestigationMissingName() throws IOException {
         //This test fails. Currently a randomly selected name is inserted into the required name field.
         HttpResponse response = requtil.createInvestigation(null, "1234");
-        Assert.assertEquals("\"Unexpected Error\"", EntityUtils.toString(response.getEntity()));
+        String unexpectedError = "\"Unexpected Error\"";
+        Assert.assertEquals(unexpectedError, EntityUtils.toString(response.getEntity()));
         Assert.assertEquals(400, response.getStatusLine().getStatusCode());
     }
     @Test
@@ -134,7 +138,7 @@ public class SignifydTest {
         //This test fails - instead of getting a "not found" error we get a JSON error.
         //We assume 1 does not exist
         HttpResponse response = requtil.getInvestigation("1");
-        Assert.assertEquals("\"Not found\"", EntityUtils.toString(response.getEntity()));
+        Assert.assertEquals(notFoundError, EntityUtils.toString(response.getEntity()));
         //Verify Status Code
         Assert.assertEquals(404, response.getStatusLine().getStatusCode());
     }
@@ -152,13 +156,13 @@ public class SignifydTest {
     public void updateInvestigationThatDoesntExist() throws IOException {
         //We assume 1 does not exist, however we could add a method to identify those that exist and use the first that doesn't
         HttpResponse response = requtil.updateInvestigation("1", "test", "1234");
-        Assert.assertEquals("\"Not found\"", EntityUtils.toString(response.getEntity()));
+        Assert.assertEquals(notFoundError, EntityUtils.toString(response.getEntity()));
         Assert.assertEquals(404, response.getStatusLine().getStatusCode());
     }
     @Test
     public void updateInvestigationNoId() throws IOException {
         HttpResponse response = requtil.updateInvestigation("", "test", "1234");
-        Assert.assertEquals("{\"msg\":\"Invalid request\"}",
+        Assert.assertEquals(invalidRequestError,
                 EntityUtils.toString(response.getEntity()));
         Assert.assertEquals(400, response.getStatusLine().getStatusCode());
     }
@@ -168,7 +172,7 @@ public class SignifydTest {
         // required field is missing so the request should return an error state
         HttpResponse response = requtil.updateInvestigation(setupInvestigation.investigationId,
                 null, "1234");
-        Assert.assertEquals("{\"msg\":\"Invalid request\"}",
+        Assert.assertEquals(invalidRequestError,
                 EntityUtils.toString(response.getEntity()));
         Assert.assertEquals(400, response.getStatusLine().getStatusCode());
     }
@@ -176,22 +180,21 @@ public class SignifydTest {
     public void deleteInvestigation() throws IOException {
         HttpResponse response = requtil.deleteInvestigation(setupInvestigation.investigationId);
 
-        Assert.assertEquals(EntityUtils.toString(response.getEntity()), "{}");
+        Assert.assertEquals("{}", EntityUtils.toString(response.getEntity()));
         Assert.assertEquals(200, response.getStatusLine().getStatusCode());
     }
     @Test
     public void deleteInvestigationIdDoesntExist() throws IOException {
         //Again we assume 1 does not and will not exists, however we could scan the api for an invalid id.
         HttpResponse response = requtil.deleteInvestigation("1");
-        Assert.assertEquals(EntityUtils.toString(response.getEntity()), "\"Not found\"");
+        Assert.assertEquals(notFoundError, EntityUtils.toString(response.getEntity()));
         Assert.assertEquals(404, response.getStatusLine().getStatusCode());
     }
     @Test
     public void deleteInvestigationNoId() throws IOException {
         //Again we assume 1 does not and will not exists, however we could scan the api for an invalid id.
         HttpResponse response = requtil.deleteInvestigation("");
-        Assert.assertEquals(EntityUtils.toString(response.getEntity()),
-                "{\"msg\":\"Invalid request\"}");
+        Assert.assertEquals(invalidRequestError, EntityUtils.toString(response.getEntity()));
         Assert.assertEquals(400, response.getStatusLine().getStatusCode());
     }
 }
