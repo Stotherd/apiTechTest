@@ -10,3 +10,5 @@ Assumed for the cases where we are looking for an ID that doesn't exist that Inv
 Some tests have not been implemented due to their similarity with other tests, however the method definitions have been commented out.
 ## Test failures
 Currently some tests fail. They do not conform to the schema, either returning an incorrect error code based on the schema, or accepting invalid data and not returning an expected error.
+
+These tests have been commented with an explanation.
